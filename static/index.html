@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能简历分析系统 - AI Resume Analyzer</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
+</head>
+<body>
+    <div class="app">
+        <!-- 顶部导航 -->
+        <header class="header">
+            <div class="header-inner">
+                <div class="logo">
+                    <span class="logo-icon">📄</span>
+                    <div>
+                        <h1>智能简历分析系统</h1>
+                        <span class="logo-sub">AI Resume Analyzer</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-outline" onclick="loadSample()">📋 加载示例简历</button>
+                    <span class="badge badge-ai">🤖 AI驱动</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主体 -->
+        <div class="main-body">
+            <!-- 左侧：输入区 -->
+            <aside class="input-panel" id="inputPanel">
+                <div class="panel-card">
+                    <h3>📤 上传简历</h3>
+                    <div class="upload-zone" id="uploadZone"
+                         ondragover="handleDragOver(event)"
+                         ondragleave="handleDragLeave(event)"
+                         ondrop="handleDrop(event)"
+                         onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" accept=".pdf,.docx,.txt"
+                               onchange="handleFileSelect(event)" hidden>
+                        <div class="upload-icon">📂</div>
+                        <p class="upload-text">拖拽文件到此处 或 <span class="link">点击上传</span></p>
+                        <p class="upload-hint">支持 PDF / DOCX / TXT 格式</p>
+                        <div class="file-preview" id="filePreview" style="display:none;">
+                            <span class="file-name" id="fileName"></span>
+                            <span class="file-remove" onclick="event.stopPropagation();removeFile()">✕</span>
+                        </div>
+                    </div>
+
+                    <div class="divider"><span>或者</span></div>
+
+                    <div class="text-input-area">
+                        <label>📝 直接粘贴简历文本</label>
+                        <textarea id="resumeText" class="text-input"
+                                  placeholder="在此粘贴您的简历内容...&#10;&#10;示例格式：&#10;姓名&#10;联系方式&#10;教育背景&#10;技能列表&#10;项目经验&#10;自我评价"
+                                  rows="8"></textarea>
+                    </div>
+
+                    <button class="btn-primary btn-full" onclick="analyzeResume()" id="analyzeBtn">
+                        🔍 开始分析
+                    </button>
+                    <div class="analyze-tip" id="analyzeTip"></div>
+                </div>
+
+                <!-- 岗位匹配 -->
+                <div class="panel-card" style="margin-top:16px;">
+                    <h3>🎯 岗位匹配（可选）</h3>
+                    <div class="match-area">
+                        <select id="jobSelect" class="select-input">
+                            <option value="">选择目标岗位进行匹配...</option>
+                        </select>
+                        <button class="btn-secondary btn-full" onclick="matchJob()" style="margin-top:8px;">
+                            📊 分析匹配度
+                        </button>
+                    </div>
+                    <div class="match-result" id="matchResult" style="display:none;"></div>
+                </div>
+            </aside>
+
+            <!-- 右侧：结果区 -->
+            <main class="result-panel" id="resultPanel">
+                <!-- 空状态 -->
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">🤖</div>
+                    <h2>AI简历分析器就绪</h2>
+                    <p>上传简历或粘贴文本，获取AI驱动的智能分析报告</p>
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <span class="feature-icon">📊</span>
+                            <strong>多维评分</strong>
+                            <span>完整度·技能·经验·格式</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🎯</span>
+                            <strong>岗位匹配</strong>
+                            <span>智能比对JD要求</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">💡</span>
+                            <strong>改进建议</strong>
+                            <span>针对性优化方向</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">📈</span>
+                            <strong>可视化报告</strong>
+                            <span>雷达图·技能分布</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分析结果 -->
+                <div class="analysis-results" id="analysisResults" style="display:none;">
+                    <!-- 评分卡片 -->
+                    <section class="score-section" id="scoreSection"></section>
+
+                    <!-- 图表区 -->
+                    <section class="charts-section">
+                        <div class="chart-card">
+                            <h3>📊 技能雷达图</h3>
+                            <div class="chart-container">
+                                <canvas id="radarChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>🗂️ 技能分类分布</h3>
+                            <div class="skill-bars" id="skillBars"></div>
+                        </div>
+                    </section>
+
+                    <!-- 改进建议 -->
+                    <section class="suggestions-section">
+                        <h3>💡 改进建议</h3>
+                        <div class="suggestions-list" id="suggestionsList"></div>
+                    </section>
+
+                    <!-- 简历摘要 -->
+                    <section class="summary-section">
+                        <h3>📋 简历摘要</h3>
+                        <div class="resume-summary" id="resumeSummary"></div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display:none;">
+        <div class="loading-spinner"></div>
+        <p>AI正在分析您的简历...</p>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
