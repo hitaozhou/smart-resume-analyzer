@@ -54,7 +54,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-浏览器打开 **http://localhost:8081**，点击「加载示例简历」即可体验。
+浏览器打开 [http://localhost:8081](http://localhost:8081)，点击「加载示例简历」即可体验。
 
 ## 📁 项目结构
 
