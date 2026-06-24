@@ -3,7 +3,6 @@
  * Chart.js 可视化 + 文件上传 + API 交互
  */
 
-let radarChart = null;
 let selectedFile = null;
 let lastAnalysisData = null;
 
@@ -180,46 +179,108 @@ function scoreColor(score, max) {
 }
 
 function renderRadarChart(radarData) {
-    const ctx = document.getElementById('radarChart').getContext('2d');
+    const canvas = document.getElementById('radarChart');
+    const ctx = canvas.getContext('2d');
 
-    if (radarChart) radarChart.destroy();
+    // 设置画布尺寸（高分屏适配）
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const size = Math.min(rect.width || 350, 350);
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    ctx.scale(dpr, dpr);
 
-    const colors = ['rgba(124,58,237,0.2)', 'rgba(124,58,237,1)'];
+    // 居中偏移
+    const cx = size / 2, cy = size / 2;
+    const radius = size * 0.32;
+    const levels = 4;  // 4层同心环
+    const count = radarData.labels.length;
+    const angleStep = (Math.PI * 2) / count;
 
-    radarChart = new Chart(ctx, {
-        type: 'radar',
-        data: {
-            labels: radarData.labels,
-            datasets: [{
-                label: '技能分布',
-                data: radarData.values,
-                backgroundColor: 'rgba(124,58,237,0.15)',
-                borderColor: 'rgba(124,58,237,0.8)',
-                borderWidth: 2,
-                pointBackgroundColor: 'rgba(124,58,237,1)',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            scales: {
-                r: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: { stepSize: 25, font: { size: 10 }, backdropColor: 'transparent' },
-                    pointLabels: { font: { size: 11, weight: '500' } },
-                    grid: { color: 'rgba(0,0,0,0.06)' },
-                }
-            },
-            plugins: {
-                legend: { display: false },
-            }
+    // 清除
+    ctx.clearRect(0, 0, size, size);
+
+    // 绘制同心网格
+    for (let l = 1; l <= levels; l++) {
+        const r = (radius / levels) * l;
+        ctx.beginPath();
+        for (let i = 0; i <= count; i++) {
+            const a = angleStep * i - Math.PI / 2;
+            const x = cx + r * Math.cos(a);
+            const y = cy + r * Math.sin(a);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
-    });
+        ctx.closePath();
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // 刻度标签
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '9px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText((l * 25) + '', cx + 4, cy - r + 10);
+    }
+
+    // 绘制轴线
+    for (let i = 0; i < count; i++) {
+        const a = angleStep * i - Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + radius * Math.cos(a), cy + radius * Math.sin(a));
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    // 绘制数据区域
+    ctx.beginPath();
+    for (let i = 0; i < count; i++) {
+        const a = angleStep * i - Math.PI / 2;
+        const val = Math.min(radarData.values[i] || 0, 100) / 100;
+        const r = radius * val;
+        const x = cx + r * Math.cos(a);
+        const y = cy + r * Math.sin(a);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(124,58,237,0.15)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(124,58,237,0.8)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 绘制数据点
+    for (let i = 0; i < count; i++) {
+        const a = angleStep * i - Math.PI / 2;
+        const val = Math.min(radarData.values[i] || 0, 100) / 100;
+        const r = radius * val;
+        const x = cx + r * Math.cos(a);
+        const y = cy + r * Math.sin(a);
+
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#7c3aed';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    // 绘制轴标签
+    ctx.fillStyle = '#374151';
+    ctx.font = '11px "PingFang SC","Microsoft YaHei",sans-serif';
+    for (let i = 0; i < count; i++) {
+        const a = angleStep * i - Math.PI / 2;
+        const labelR = radius + 22;
+        const x = cx + labelR * Math.cos(a);
+        const y = cy + labelR * Math.sin(a);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(radarData.labels[i], x, y);
+    }
 }
 
 function renderSkillBars(breakdown) {
